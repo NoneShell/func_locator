@@ -3,19 +3,21 @@ import os
 from elftools.elf.elffile import ELFFile
 import r2pipe
 
+def log_with_indent(level: int, log_type: str, message: str, flush: bool = False) -> None:
+    color_map = {
+        "DONE": "\033[32m[+]\033[0m",
+        "ERROR": "\033[31m[!]\033[0m",
+        "DOING": "\033[34m[*]\033[0m",
+        "LIST": "\033[33m[-]\033[0m"
+    }
+    color = color_map.get(log_type, "")
+    if flush:
+        print(f"\r{'    ' * level}{color}: {message}", end="", flush=True)
+    else:
+        print(f"{'    ' * level}{color}: {message}")
 
-def log_with_indent(level, type, message):
-    if type == "DONE":
-        color = "\033[32m[+]\033[0m"
-    elif type == "ERROR":
-        color = "\033[31m[!]\033[0m"
-    elif type == "DOING":
-        color = "\033[34m[*]\033[0m"
-    elif type == "LIST":
-        color = "\033[33m[-]\033[0m"
-    print("%s%s: %s" % (level * "    ", color, message))
 
-def get_linked_shared_libraries(binary, rootfs):
+def get_linked_shared_libraries(binary: str, rootfs: str) -> list[str]:
     """
     Get linked shared libraries of a binary
     :param binary: path to binary
@@ -29,9 +31,11 @@ def get_linked_shared_libraries(binary, rootfs):
         log_with_indent(1, "DOING", "Checking %s" % binary.split("/")[-1])
         with open(binary, "rb") as f:
             r2 = r2pipe.open(binary, flags=["-2"])
-            tmp_libraries = r2.cmdj("ilj")
+            tmp_libraries = r2.cmd("ilj")
             r2.quit()
         log_with_indent(1, "DONE", "Found %d libraries in %s" % (len(tmp_libraries), binary.split("/")[-1]))
+    else:
+        log_with_indent(1, "ERROR", "Binary is not provided, checking all libraries in rootfs")
 
     end_flag = False
     for root, dirs, files in os.walk(rootfs):
@@ -50,20 +54,20 @@ def get_linked_shared_libraries(binary, rootfs):
                             break
             # binary is not provided
             if binary is None:
-                # print(file)
                 if "so" in file and judge_shared_library(os.path.join(root, file)):
-                    # print(os.path.join(root, file))
                     libraries.append(os.path.join(root, file))
             if end_flag == True:
                 break
-            
+
+    log_with_indent(1, "DONE", "Found %d libraries in rootfs" % len(libraries))        
+    
     if (end_flag == False and tmp_libraries != []) or invalid_libraries != []:
         for each_invalid_library in (tmp_libraries + invalid_libraries):
             log_with_indent(1, "ERROR", "Cannot find %s" % each_invalid_library.split("/")[-1])
 
     return libraries
 
-def judge_function_exported(library, function_name):
+def judge_function_exported(library: str, function_name: str) -> bool:
     """
     Judge whether a function is exported in a library
     :param library: path to library
@@ -78,21 +82,19 @@ def judge_function_exported(library, function_name):
         r2.quit()
         return False
 
-def judge_shared_library(binary):
+def judge_shared_library(binary: str) -> bool:
     """
     Judge whether a binary is a shared library
     :param binary: path to binary
     :return: True or False
     """
-    # log_with_indent(2, "DOING", "Checking %s" % binary.split("/")[-1])
     r2 = r2pipe.open(binary, flags=["-2"])
+    # binary is a shared library
     if r2.cmd("ih~ELF") != "" and r2.cmd("i~DYN") != "":
         r2.quit()
-        # log_with_indent(2, "DONE", "Found %s is a shared library" % binary.split("/")[-1])
         return True
     else:
         r2.quit()
-        # log_with_indent(2, "DONE", "Found %s is not a shared library" % binary.split("/")[-1])
         return False
 
 def main():
@@ -115,14 +117,14 @@ def main():
     # get all linked shared libraries of binary
     libraries = get_linked_shared_libraries(binary_path, rootfs_path)
 
+    # find function in libraries
     result = []
-    for each_library in libraries:
-        log_with_indent(1, "DOING", "Checking %s" % each_library.split("/")[-1])
+    for i, each_library in enumerate(libraries):
+        log_with_indent(1, "DOING", "Checking {} / {} {:<30}".format(i + 1, len(libraries), each_library.split("/")[-1]), flush=True)
         flag = judge_function_exported(each_library, args.function)
         if flag == True:
-            # log_with_indent(1, "DONE", "Found %s in %s" % (args.function, each_library.split("/")[-1]))
             result.append(each_library)
-    
+    print("\n")
     log_with_indent(1, "DONE", "Done")
     for each in result:
         log_with_indent(2, "DONE", "Found %s in %s" % (args.function, each.split("/")[-1]))
