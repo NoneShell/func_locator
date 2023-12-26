@@ -30,7 +30,7 @@ def get_linked_shared_libraries(binary: str, rootfs: str) -> list[str]:
         log_with_indent(1, "DOING", "Checking %s" % binary.split("/")[-1])
         with open(binary, "rb") as f:
             r2 = r2pipe.open(binary, flags=["-2"])
-            tmp_libraries = r2.cmd("ilj")
+            tmp_libraries = r2.cmdj("ilj")
             r2.quit()
         log_with_indent(1, "DONE", "Found %d libraries in %s" % (len(tmp_libraries), binary.split("/")[-1]))
     else:
