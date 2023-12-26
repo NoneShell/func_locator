@@ -1,0 +1,1 @@
+A simple script that helps to identify the dynamic link library to which a program's import function belongs.
