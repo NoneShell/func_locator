@@ -1,6 +1,5 @@
 import argparse
 import os
-from elftools.elf.elffile import ELFFile
 import r2pipe
 
 def log_with_indent(level: int, log_type: str, message: str, flush: bool = False) -> None:
