@@ -32,7 +32,6 @@ def get_linked_shared_libraries(binary: str, rootfs: str) -> list[str]:
             r2 = r2pipe.open(binary, flags=["-2"])
             tmp_libraries = r2.cmdj("ilj")
             r2.quit()
-        log_with_indent(1, "DONE", "Found %d libraries in %s" % (len(tmp_libraries), binary.split("/")[-1]))
     else:
         log_with_indent(1, "ERROR", "Binary is not provided, checking all libraries in rootfs")
 
@@ -87,7 +86,10 @@ def judge_shared_library(binary: str) -> bool:
     :param binary: path to binary
     :return: True or False
     """
-    r2 = r2pipe.open(binary, flags=["-2"])
+    try:
+        r2 = r2pipe.open(binary, flags=["-2"])
+    except:
+        return False
     # binary is a shared library
     if r2.cmd("ih~ELF") != "" and r2.cmd("i~DYN") != "":
         r2.quit()
