@@ -43,7 +43,7 @@ def get_linked_shared_libraries(binary: str, rootfs: str) -> list[str]:
                 for each_library in tmp_libraries:
                     if each_library in file:
                         if judge_shared_library(os.path.join(root, file)) == False:
-                            print(os.path.join(root, file))
+                            # print(os.path.join(root, file))
                             invalid_libraries.append(os.path.join(root, file))
                         libraries.append(os.path.join(root, file))
                         tmp_libraries.remove(each_library)
